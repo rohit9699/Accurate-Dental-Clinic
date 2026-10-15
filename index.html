@@ -134,6 +134,10 @@
     .card-label { color: #7a8a83; font-size: 10px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; }
     .online { display: inline-flex; align-items: center; gap: 7px; color: #638073; font-size: 11px; }
     .online::before { width: 7px; height: 7px; border-radius: 50%; background: #67a980; content: ""; }
+    .online[data-state="connecting"]::before { animation: status-blink 1s ease-in-out infinite; }
+    .online[data-state="speaking"]::before { background: #4a9b7c; }
+    .online[data-state="error"]::before { background: #c2675f; }
+    @keyframes status-blink { 50% { opacity: .35; } }
     .voice-visual {
       position: relative;
       display: grid;
@@ -153,23 +157,33 @@
     .voice-ring::after { inset: 25px; border-color: #c6ddcf; }
     .voice-orb {
       z-index: 1;
-      display: grid;
+      display: block;
       width: 88px;
       height: 88px;
-      place-items: center;
+      overflow: hidden;
       border-radius: 50%;
-      background: linear-gradient(145deg, #398b70, #1a634f);
-      box-shadow: 0 12px 28px rgba(28, 114, 93, .28);
-      color: white;
+      background: #efe8dc;
+      box-shadow: 0 12px 28px rgba(28, 80, 62, .18);
       transition: transform .3s ease, box-shadow .3s ease;
     }
-    .voice-orb svg { width: 30px; height: 30px; }
+    .voice-orb svg { display: block; width: 100%; height: 100%; }
     .assistant-card.is-active .voice-ring { animation: pulse 2.2s ease-out infinite; }
     .assistant-card.is-active .voice-ring::before { animation: pulse 2.2s ease-out .4s infinite; }
-    .assistant-card.is-active .voice-orb { transform: scale(1.06); box-shadow: 0 0 0 12px rgba(63, 147, 111, .12), 0 12px 28px rgba(28, 114, 93, .3); }
+    .assistant-card.is-active .voice-orb { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(63, 147, 111, .12), 0 12px 28px rgba(28, 114, 93, .24); }
+    .assistant-card.is-speaking .voice-orb { animation: receptionist-speaking .75s ease-in-out infinite alternate; }
+    @keyframes receptionist-speaking { to { transform: scale(1.09); } }
     @keyframes pulse { 0% { transform: scale(.95); opacity: .9; } 100% { transform: scale(1.12); opacity: 0; } }
     .assistant-title { margin: 0; text-align: center; font-family: Georgia, "Times New Roman", serif; font-size: 26px; font-weight: 500; letter-spacing: -.035em; }
     .assistant-description { min-height: 42px; margin: 9px auto 20px; color: #788780; font-size: 12px; line-height: 1.65; text-align: center; }
+    .conversation-hint { display: none; align-items: center; justify-content: center; gap: 8px; margin: -8px 0 15px; color: #6c8076; font-size: 11px; }
+    .assistant-card.is-active .conversation-hint { display: flex; }
+    .sound-wave { display: inline-flex; height: 16px; align-items: center; gap: 2px; }
+    .sound-wave i { width: 2px; height: 5px; border-radius: 2px; background: #51a17e; }
+    .assistant-card.is-speaking .sound-wave i { animation: wave .7s ease-in-out infinite alternate; }
+    .sound-wave i:nth-child(2), .sound-wave i:nth-child(6) { animation-delay: .15s; }
+    .sound-wave i:nth-child(3), .sound-wave i:nth-child(5) { animation-delay: .3s; }
+    .sound-wave i:nth-child(4) { animation-delay: .1s; }
+    @keyframes wave { to { height: 14px; } }
     .call-button {
       display: flex;
       width: 100%;
@@ -192,16 +206,21 @@
     .call-button.end-call { background: #9b5048; }
     .privacy-note { margin: 14px 0 0; color: #96a19c; font-size: 10px; line-height: 1.5; text-align: center; }
     .transcript {
-      max-height: 120px;
-      margin: 13px 0 0;
+      display: grid;
+      max-height: 150px;
+      gap: 8px;
+      margin: 14px 0 0;
       overflow-y: auto;
       color: #61736b;
-      font-size: 11px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.5;
+      scrollbar-color: #c8d8ce transparent;
+      scrollbar-width: thin;
     }
     .transcript:empty { display: none; }
-    .transcript p { margin: 6px 0; }
-    .transcript strong { color: var(--green-dark); }
+    .transcript p { width: fit-content; max-width: 90%; margin: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: #f0f4f0; }
+    .transcript p.is-user { justify-self: end; border-radius: 14px 14px 4px 14px; background: #e4f1e9; color: #315e4c; }
+    .transcript strong { display: block; margin-bottom: 2px; color: var(--green-dark); font-size: 10px; }
     .error-message { margin: 10px 0 0; color: #a7433b; font-size: 11px; line-height: 1.5; text-align: center; }
     .error-message:empty { display: none; }
 
@@ -283,20 +302,38 @@
         <div class="glow" aria-hidden="true"></div>
         <section class="assistant-card" id="assistant-card" aria-labelledby="assistant-title">
           <div class="card-top">
-            <span class="card-label">Your dental assistant</span>
-            <span class="online" id="agent-status">Ready to help</span>
+            <span class="card-label">AI receptionist</span>
+            <span class="online" id="agent-status" data-state="ready">Ready to help</span>
           </div>
           <div class="voice-visual" aria-hidden="true">
             <span class="voice-ring"></span>
             <span class="voice-orb">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3m-4 0h8"/></svg>
+              <svg viewBox="0 0 100 100" role="img" aria-label="Illustration of your friendly AI receptionist">
+                <defs>
+                  <linearGradient id="portrait-bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5eee3"/><stop offset="1" stop-color="#dcebe0"/></linearGradient>
+                  <linearGradient id="portrait-coat" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3c806b"/><stop offset="1" stop-color="#225c4e"/></linearGradient>
+                </defs>
+                <rect width="100" height="100" fill="url(#portrait-bg)"/>
+                <path d="M15 100c2-17 12-27 28-31h14c16 4 26 14 28 31" fill="url(#portrait-coat)"/>
+                <path d="m39 67 11 13 11-13-4-7H43z" fill="#fffaf1"/>
+                <path d="M31 39c0-19 8-29 21-29 15 0 23 11 23 30v11H31z" fill="#344039"/>
+                <path d="M37 38c0-13 5-20 15-20 12 0 17 8 17 21v11c0 14-8 23-18 23S34 63 34 49V39z" fill="#d99f78"/>
+                <path d="M34 41c2-17 9-24 20-24 8 0 14 5 17 14-7-1-13-5-17-10-4 8-11 13-20 14z" fill="#344039"/>
+                <path d="M42 44h4m11 0h4" stroke="#493b36" stroke-width="2" stroke-linecap="round"/>
+                <path d="M48 54c2 2 5 2 7 0" fill="none" stroke="#a75d56" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="32" cy="47" r="3" fill="#d99f78"/><circle cx="69" cy="47" r="3" fill="#d99f78"/>
+              </svg>
             </span>
           </div>
-          <h2 class="assistant-title" id="assistant-title">How can we help?</h2>
-          <p class="assistant-description" id="assistant-description">Tap below to start a private voice conversation with our assistant.</p>
+          <h2 class="assistant-title" id="assistant-title">Hi, how can I help?</h2>
+          <p class="assistant-description" id="assistant-description">I'm your AI receptionist. I can help with appointments and common questions.</p>
+          <div class="conversation-hint" id="conversation-hint" aria-live="polite">
+            <span class="sound-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            <span id="conversation-hint-text">Listening to you</span>
+          </div>
           <button class="call-button" id="call-button" type="button" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.7L7.1 10.3a16 16 0 0 0 6.6 6.6l1.9-1.9a2 2 0 0 1 1.7-.6l3 .5a2 2 0 0 1 1.7 2Z"/></svg>
-            <span id="call-button-label">Connecting…</span>
+            <span id="call-button-label">Call receptionist</span>
           </button>
           <div class="transcript" id="transcript" aria-live="polite" aria-label="Conversation transcript"></div>
           <p class="error-message" id="error-message" role="alert"></p>
@@ -348,6 +385,7 @@
     const buttonLabel = document.getElementById("call-button-label");
     const statusLabel = document.getElementById("agent-status");
     const description = document.getElementById("assistant-description");
+    const conversationHint = document.getElementById("conversation-hint-text");
     const card = document.getElementById("assistant-card");
     const errorMessage = document.getElementById("error-message");
     const transcript = document.getElementById("transcript");
@@ -362,6 +400,8 @@
       callButton.disabled = false;
       buttonLabel.textContent = callActive ? "End conversation" : "Try again";
       statusLabel.textContent = callActive ? "Call needs attention" : "Connection issue";
+      statusLabel.dataset.state = "error";
+      card.classList.remove("is-speaking");
     }
 
     function setCallState(active) {
@@ -370,11 +410,14 @@
       callButton.disabled = false;
       callButton.classList.toggle("end-call", active);
       card.classList.toggle("is-active", active);
-      buttonLabel.textContent = active ? "End conversation" : "Start talking";
+      card.classList.remove("is-speaking");
+      buttonLabel.textContent = active ? "End conversation" : "Call receptionist";
       statusLabel.textContent = active ? "You're connected" : "Ready to help";
+      statusLabel.dataset.state = active ? "connected" : "ready";
       description.textContent = active
-        ? "Go ahead and speak. We're listening."
-        : "Tap below to start a private voice conversation with our assistant.";
+        ? "You're speaking with our AI receptionist."
+        : "I'm your AI receptionist. I can help with appointments and common questions.";
+      conversationHint.textContent = "Listening to you";
       if (!active) errorMessage.textContent = "";
     }
 
@@ -383,6 +426,7 @@
       callButton.disabled = true;
       buttonLabel.textContent = "Connecting…";
       statusLabel.textContent = "Connecting";
+      statusLabel.dataset.state = "connecting";
       description.textContent = "Please allow microphone access if your browser asks.";
       errorMessage.textContent = "";
 
@@ -415,8 +459,10 @@
     function addTranscript(message) {
       if (!message || message.type !== "transcript" || message.transcriptType !== "final" || !message.transcript) return;
       const line = document.createElement("p");
+      const isAssistant = message.role === "assistant";
       const speaker = document.createElement("strong");
-      speaker.textContent = message.role === "assistant" ? "Assistant: " : "You: ";
+      speaker.textContent = isAssistant ? "AI receptionist" : "You";
+      line.classList.toggle("is-user", !isAssistant);
       line.appendChild(speaker);
       line.appendChild(document.createTextNode(message.transcript));
       transcript.appendChild(line);
@@ -448,9 +494,25 @@
         vapiInstance.on("call-start", function () { setCallState(true); });
         vapiInstance.on("call-end", function () { setCallState(false); });
         vapiInstance.on("message", addTranscript);
+        vapiInstance.on("speech-start", function () {
+          if (!callActive) return;
+          card.classList.add("is-speaking");
+          statusLabel.textContent = "Receptionist speaking";
+          statusLabel.dataset.state = "speaking";
+          conversationHint.textContent = "Your receptionist is speaking";
+        });
+        vapiInstance.on("speech-end", function () {
+          if (!callActive) return;
+          card.classList.remove("is-speaking");
+          statusLabel.textContent = "Listening to you";
+          statusLabel.dataset.state = "connected";
+          conversationHint.textContent = "Listening to you";
+        });
         vapiInstance.on("error", showError);
         callButton.disabled = false;
-        buttonLabel.textContent = "Start talking";
+        buttonLabel.textContent = "Call receptionist";
+        statusLabel.textContent = "Ready to help";
+        statusLabel.dataset.state = "ready";
       } catch (error) {
         showError(error);
       }
