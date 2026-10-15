@@ -340,6 +340,7 @@
     let vapiInstance = null;
     let callActive = false;
     let callConnecting = false;
+    let sdkLoading = false;
 
     const assistant = "8da97d6e-6158-43c5-92a4-e79033c05ec1";
     const apiKey = "2e339a51-6263-41b1-b851-e6e0e4106328";
@@ -357,7 +358,8 @@
       console.error("Voice assistant error:", error);
       errorMessage.textContent = "We couldn't start the voice assistant. Please check your connection and try again.";
       callConnecting = false;
-      callButton.disabled = !vapiInstance;
+      sdkLoading = false;
+      callButton.disabled = false;
       buttonLabel.textContent = callActive ? "End conversation" : "Try again";
       statusLabel.textContent = callActive ? "Call needs attention" : "Connection issue";
     }
@@ -393,7 +395,11 @@
     }
 
     callButton.addEventListener("click", function () {
-      if (!vapiInstance || callConnecting) return;
+      if (callConnecting || sdkLoading) return;
+      if (!vapiInstance) {
+        loadVoiceSdk();
+        return;
+      }
       if (callActive) {
         try {
           vapiInstance.stop();
@@ -450,14 +456,30 @@
       }
     }
 
-    const sdkScript = document.createElement("script");
-    sdkScript.src = "https://cdn.jsdelivr.net/gh/VapiAI/client-sdk-html-script-tag@latest/dist/assets/index.js";
-    sdkScript.async = true;
-    sdkScript.onload = initializeVoiceAgent;
-    sdkScript.onerror = function () {
-      showError(new Error("Could not download the voice assistant SDK."));
-    };
-    document.head.appendChild(sdkScript);
+    function loadVoiceSdk() {
+      if (sdkLoading || vapiInstance) return;
+
+      sdkLoading = true;
+      callButton.disabled = true;
+      buttonLabel.textContent = "Connecting…";
+      statusLabel.textContent = "Connecting";
+      errorMessage.textContent = "";
+
+      const sdkScript = document.createElement("script");
+      sdkScript.src = "https://cdn.jsdelivr.net/gh/VapiAI/client-sdk-html-script-tag@latest/dist/assets/index.js";
+      sdkScript.async = true;
+      sdkScript.onload = function () {
+        sdkLoading = false;
+        initializeVoiceAgent();
+      };
+      sdkScript.onerror = function () {
+        sdkScript.remove();
+        showError(new Error("Could not download the voice assistant SDK."));
+      };
+      document.head.appendChild(sdkScript);
+    }
+
+    loadVoiceSdk();
   </script>
 </body>
 </html>
