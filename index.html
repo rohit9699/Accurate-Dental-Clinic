@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Accurate Dental Clinic</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #e8f8ff, #f7fcff);
+      color: #12344d;
+    }
+
+    .card {
+      width: 90%;
+      max-width: 520px;
+      padding: 40px 25px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 15px;
+      color: #087ea4;
+    }
+
+    p {
+      margin: 10px 0;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .notice {
+      margin-top: 20px;
+      padding: 14px;
+      background: #eefaff;
+      border-radius: 10px;
+      font-size: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>Accurate Dental Clinic</h1>
+
+    <p>
+      AI assistant se baat karke apna dental appointment book karein.
+    </p>
+
+    <p>
+      Voice button par click karein aur microphone permission allow karein.
+    </p>
+
+    <div class="notice">
+      Appointment booking ke liye shaant jagah se baat karein.
+    </div>
+  </main>
+
+  <script>
+    var vapiInstance = null;
+
+    /*
+      Neeche apna Vapi Assistant ID aur Public API Key dalein.
+      Private API key kabhi mat dalein.
+    */
+
+    const assistant = "17f3cb92-2ed3-4ad2-9242-bcc3e94d0503";
+    const apiKey = "0cdd3179-670b-4b34-a41d-cfd01ce0c2a2";
+
+    const buttonConfig = {};
+
+    (function (documentObject, tagName) {
+      const script = documentObject.createElement(tagName);
+      const firstScript =
+        documentObject.getElementsByTagName(tagName)[0];
+
+      script.src =
+        "https://cdn.jsdelivr.net/gh/VapiAI/html-script-tag@latest/dist/assets/index.js";
+
+      script.defer = true;
+      script.async = true;
+
+      firstScript.parentNode.insertBefore(script, firstScript);
+
+      script.onload = function () {
+        vapiInstance = window.vapiSDK.run({
+          apiKey: apiKey,
+          assistant: assistant,
+          config: buttonConfig
+        });
+      };
+    })(document, "script");
+  </script>
+</body>
+</html>
